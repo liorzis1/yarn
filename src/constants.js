@@ -69,6 +69,8 @@ export const DEFAULT_INDENT = '  ';
 export const SINGLE_INSTANCE_PORT = 31997;
 export const SINGLE_INSTANCE_FILENAME = '.yarn-single-instance';
 
+export const LOGS_MAX_DEFAULT = 10;
+
 export const ENV_PATH_KEY = getPathKey(process.platform, process.env);
 
 export function getPathKey(platform: string, env: Env): string {

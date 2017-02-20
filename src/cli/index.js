@@ -21,6 +21,8 @@ const net = require('net');
 const onDeath = require('death');
 const path = require('path');
 const pkg = require('../../package.json');
+const glob = require('glob');
+const rimraf = require('rimraf');
 
 loudRejection();
 
@@ -361,11 +363,21 @@ function onUnexpectedError(err: Error) {
   }
 }
 
-function writeErrorReport(log) : ?string {
-  const errorReportLoc = path.join(config.cwd, 'yarn-error.log');
+function getTimestampForLog(): string {
+  return (new Date()).toISOString().replace(/[.:]/g, '_');
+}
+
+function writeErrorReport(log: Array<string>): ?string {
+  const errorReportLoc = path.join(config.logsFolder, getTimestampForLog(), '-yarn-error.log');
 
   try {
     fs.writeFileSync(errorReportLoc, log.join('\n\n') + '\n');
+    glob(path.resolve(config.logsFolder, '*-yarn-error.log'), function(err, files) {
+      while (files.length >= config.logsMax) {
+        rimraf.sync(files[0]);
+        files.splice(0, 1);
+      }
+    });
   } catch (err) {
     reporter.error(reporter.lang('fileWriteError', errorReportLoc, err.message));
     return undefined;

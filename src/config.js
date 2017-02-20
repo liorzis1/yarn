@@ -36,6 +36,8 @@ export type ConfigOptions = {
   production?: boolean,
   binLinks?: boolean,
   networkConcurrency?: number,
+  logsFolder?: string,
+  logsMax?: number,
 
   // Loosely compare semver for invalid cases like "0.01.0"
   looseSemver?: ?boolean,
@@ -114,6 +116,10 @@ export default class Config {
 
   //
   tempFolder: string;
+
+  //
+  logsFolder: string;
+  logsMax: number;
 
   //
   reporter: Reporter;
@@ -229,18 +235,22 @@ export default class Config {
       networkConcurrency: this.networkConcurrency,
     });
 
-    //init & create cacheFolder, tempFolder
+    //init & create cacheFolder, tempFolder, logsFolder
     this.cacheFolder = String(opts.cacheFolder || this.getOption('cache-folder') || constants.MODULE_CACHE_DIRECTORY);
     this.tempFolder = opts.tempFolder || path.join(this.cacheFolder, '.tmp');
+    this.logsFolder = opts.logsFolder || path.join(this.cacheFolder, 'logs');
+    this.logsMax = opts.logsMax || constants.LOGS_MAX_DEFAULT;
+
     await fs.mkdirp(this.cacheFolder);
     await fs.mkdirp(this.tempFolder);
+    await fs.mkdirp(this.logsFolder);
 
     if (opts.production === 'false') {
       this.production = false;
     } else if (this.getOption('production') ||
-        process.env.NODE_ENV === 'production' &&
-        process.env.NPM_CONFIG_PRODUCTION !== 'false' &&
-        process.env.YARN_PRODUCTION !== 'false') {
+      process.env.NODE_ENV === 'production' &&
+      process.env.NPM_CONFIG_PRODUCTION !== 'false' &&
+      process.env.YARN_PRODUCTION !== 'false') {
       this.production = true;
     } else {
       this.production = !!opts.production;
@@ -419,11 +429,11 @@ export default class Config {
     }
   }
 
- /**
- * try get the manifest file by looking
- * 1. mainfest file in cache
- * 2. manifest file in registry
- */
+  /**
+   * try get the manifest file by looking
+   * 1. mainfest file in cache
+   * 2. manifest file in registry
+   */
   maybeReadManifest(dir: string, priorityRegistry?: RegistryNames, isRoot?: boolean = false): Promise<?Manifest> {
     return this.getCache(`manifest-${dir}`, async (): Promise<?Manifest> => {
       const metadataLoc = path.join(dir, constants.METADATA_FILENAME);
